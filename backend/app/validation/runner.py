@@ -388,6 +388,33 @@ def invalidate_card_ancestors(node_id: int, conn=None) -> None:
             _run(c)
 
 
+def _node_card_count(conn, node_id: int) -> int:
+    row = conn.execute(
+        "SELECT COUNT(*) AS n FROM cards WHERE node_id = ? AND deleted = 0",
+        (node_id,),
+    ).fetchone()
+    return int(row["n"]) if row else 0
+
+
+def rollup_section_validated(
+    *,
+    validated_at: bool,
+    direct_card_count: int,
+    subheaders: list[dict],
+) -> bool:
+    """Section is validated when marked directly or every card-bearing subheader is."""
+    if validated_at:
+        return True
+    card_bearing = [
+        s
+        for s in subheaders
+        if not s.get("excluded") and int(s.get("card_count") or 0) > 0
+    ]
+    if card_bearing:
+        return all(s.get("validated") for s in card_bearing) and direct_card_count == 0
+    return direct_card_count == 0
+
+
 def is_validated(conn, node_id: int) -> bool:
     row = conn.execute(
         "SELECT validated_at FROM nodes WHERE id = ?", (node_id,)
@@ -395,8 +422,40 @@ def is_validated(conn, node_id: int) -> bool:
     return bool(row and row["validated_at"])
 
 
+def is_effectively_validated(conn, node_id: int) -> bool:
+    """True when a node is validated directly or (for sections) all card-bearing subheaders are."""
+    row = conn.execute(
+        "SELECT tier, validated_at FROM nodes WHERE id = ?", (node_id,)
+    ).fetchone()
+    if not row:
+        return False
+    if row["tier"] != "section":
+        return bool(row["validated_at"])
+
+    children = conn.execute(
+        """
+        SELECT id, validated_at, excluded FROM nodes
+        WHERE parent_id = ? AND tier = 'subheader'
+        """,
+        (node_id,),
+    ).fetchall()
+    subheaders = [
+        {
+            "excluded": bool(c["excluded"]),
+            "validated": bool(c["validated_at"]),
+            "card_count": _node_card_count(conn, c["id"]),
+        }
+        for c in children
+    ]
+    return rollup_section_validated(
+        validated_at=bool(row["validated_at"]),
+        direct_card_count=_node_card_count(conn, node_id),
+        subheaders=subheaders,
+    )
+
+
 def require_validated(conn, node_id: int) -> None:
-    if not is_validated(conn, node_id):
+    if not is_effectively_validated(conn, node_id):
         raise PermissionError("Validate cards before downloading.")
 
 
@@ -404,7 +463,7 @@ def subject_download_ready(conn, subject_id: int) -> bool:
     """True when every section with cards has been validated."""
     rows = conn.execute(
         """
-        SELECT n.id, n.validated_at,
+        SELECT n.id,
                (SELECT COUNT(*) FROM cards c
                 WHERE c.deleted = 0 AND c.node_id IN (
                     SELECT id FROM nodes WHERE id = n.id
@@ -416,6 +475,6 @@ def subject_download_ready(conn, subject_id: int) -> bool:
         (subject_id,),
     ).fetchall()
     for row in rows:
-        if row["card_count"] > 0 and not row["validated_at"]:
+        if row["card_count"] > 0 and not is_effectively_validated(conn, row["id"]):
             return False
     return True

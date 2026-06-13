@@ -198,3 +198,113 @@ def test_run_validation_only_queues_flagged_cards():
     assert report["total_count"] == 2
     assert report["auto_passed_count"] >= 1
     assert len(report["items"]) <= report["flagged_count"]
+
+
+def test_section_validated_when_all_subheaders_validated():
+    from app.db.database import get_conn, init_db
+    from app.service import get_tree
+    from app.validation.runner import (
+        is_effectively_validated,
+        is_validated,
+        require_validated,
+        subject_download_ready,
+    )
+
+    init_db()
+    with get_conn() as conn:
+        sid = conn.execute(
+            "INSERT INTO subjects (name, filename, pdf_path, status) "
+            "VALUES ('T', 't.pdf', 'x', 'approved')"
+        ).lastrowid
+        section_id = conn.execute(
+            "INSERT INTO nodes (subject_id, parent_id, tier, title, section_type, order_index) "
+            "VALUES (?, NULL, 'section', 'Section I', 'BODY', 0)",
+            (sid,),
+        ).lastrowid
+        sub1 = conn.execute(
+            "INSERT INTO nodes (subject_id, parent_id, tier, title, section_type, order_index) "
+            "VALUES (?, ?, 'subheader', 'Topic A', 'BODY', 0)",
+            (sid, section_id),
+        ).lastrowid
+        sub2 = conn.execute(
+            "INSERT INTO nodes (subject_id, parent_id, tier, title, section_type, order_index) "
+            "VALUES (?, ?, 'subheader', 'Topic B', 'BODY', 1)",
+            (sid, section_id),
+        ).lastrowid
+        conn.execute(
+            "INSERT INTO cards (node_id, front, back, tag, track, card_hash, source) "
+            "VALUES (?, 'Q1', 'A1', 'other', 'A', 'h1', 'ai')",
+            (sub1,),
+        )
+        conn.execute(
+            "INSERT INTO cards (node_id, front, back, tag, track, card_hash, source) "
+            "VALUES (?, 'Q2', 'A2', 'other', 'A', 'h2', 'ai')",
+            (sub2,),
+        )
+        conn.execute(
+            "UPDATE nodes SET validated_at = datetime('now') WHERE id IN (?, ?)",
+            (sub1, sub2),
+        )
+
+        assert not is_validated(conn, section_id)
+        assert is_effectively_validated(conn, section_id)
+        require_validated(conn, section_id)
+        assert subject_download_ready(conn, sid)
+
+    tree = get_tree(sid)
+    section = tree["sections"][0]
+    assert section["validated"] is True
+    assert tree["subject"]["all_validated"] is True
+
+    with get_conn() as conn:
+        conn.execute("DELETE FROM subjects WHERE id = ?", (sid,))
+
+
+def test_section_not_validated_until_every_subheader_with_cards_is_done():
+    from app.db.database import get_conn, init_db
+    from app.service import get_tree
+    from app.validation.runner import is_effectively_validated, is_validated
+
+    init_db()
+    with get_conn() as conn:
+        sid = conn.execute(
+            "INSERT INTO subjects (name, filename, pdf_path, status) "
+            "VALUES ('T', 't.pdf', 'x', 'approved')"
+        ).lastrowid
+        section_id = conn.execute(
+            "INSERT INTO nodes (subject_id, parent_id, tier, title, section_type, order_index) "
+            "VALUES (?, NULL, 'section', 'Section I', 'BODY', 0)",
+            (sid,),
+        ).lastrowid
+        sub1 = conn.execute(
+            "INSERT INTO nodes (subject_id, parent_id, tier, title, section_type, order_index) "
+            "VALUES (?, ?, 'subheader', 'Topic A', 'BODY', 0)",
+            (sid, section_id),
+        ).lastrowid
+        sub2 = conn.execute(
+            "INSERT INTO nodes (subject_id, parent_id, tier, title, section_type, order_index) "
+            "VALUES (?, ?, 'subheader', 'Topic B', 'BODY', 1)",
+            (sid, section_id),
+        ).lastrowid
+        conn.execute(
+            "INSERT INTO cards (node_id, front, back, tag, track, card_hash, source) "
+            "VALUES (?, 'Q1', 'A1', 'other', 'A', 'h1', 'ai')",
+            (sub1,),
+        )
+        conn.execute(
+            "INSERT INTO cards (node_id, front, back, tag, track, card_hash, source) "
+            "VALUES (?, 'Q2', 'A2', 'other', 'A', 'h2', 'ai')",
+            (sub2,),
+        )
+        conn.execute(
+            "UPDATE nodes SET validated_at = datetime('now') WHERE id = ?", (sub1,)
+        )
+
+        assert not is_validated(conn, section_id)
+        assert not is_effectively_validated(conn, section_id)
+
+    tree = get_tree(sid)
+    assert tree["sections"][0]["validated"] is False
+
+    with get_conn() as conn:
+        conn.execute("DELETE FROM subjects WHERE id = ?", (sid,))

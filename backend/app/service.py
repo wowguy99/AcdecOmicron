@@ -16,6 +16,7 @@ from .parsing.captions import attach_captions
 from .parsing.navigation import strip_guide_navigation
 from .parsing.deterministic import glossary_cards, timeline_cards
 from .parsing.structure import build_blueprint, collapse_duplicate_singletons
+from .validation.runner import rollup_section_validated
 
 # Section types whose cards we never generate.
 EXCLUDED_TYPES = {"NOTES", "BIBLIOGRAPHY", "SECTION_SUMMARY"}
@@ -190,6 +191,22 @@ def get_tree(subject_id: int) -> dict[str, Any]:
         own = counts.get(n["id"], {"A": 0, "B": 0})
         a = own["A"] + sum(c["cards_a"] for c in children)
         b = own["B"] + sum(c["cards_b"] for c in children)
+        own_validated = bool(n["validated_at"]) if "validated_at" in n.keys() else False
+        if n["tier"] == "section":
+            validated = rollup_section_validated(
+                validated_at=own_validated,
+                direct_card_count=own["A"] + own["B"],
+                subheaders=[
+                    {
+                        "excluded": c["excluded"],
+                        "validated": c["validated"],
+                        "card_count": c["cards_a"] + c["cards_b"],
+                    }
+                    for c in children
+                ],
+            )
+        else:
+            validated = own_validated
         out: dict[str, Any] = {
             "id": n["id"],
             "title": n["title"],
@@ -197,7 +214,7 @@ def get_tree(subject_id: int) -> dict[str, Any]:
             "section_type": n["section_type"],
             "excluded": bool(n["excluded"]),
             "deterministic": n["section_type"] in DETERMINISTIC_TYPES,
-            "validated": bool(n["validated_at"]) if "validated_at" in n.keys() else False,
+            "validated": validated,
             "cards_a": a,
             "cards_b": b,
             "children": children,
