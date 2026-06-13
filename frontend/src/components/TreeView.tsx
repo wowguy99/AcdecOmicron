@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 import type { Tree, TreeNode } from "../types";
 import { CardModal } from "./CardModal";
+import { SubsectionInfoModal } from "./SubsectionInfoModal";
 import { ValidateModal } from "./ValidateModal";
 
 const GENERATABLE = new Set(["BODY", "INTRODUCTION", "CONCLUSION"]);
@@ -18,6 +19,7 @@ export function TreeView({ subjectId }: { subjectId: number }) {
     title: string;
     track: "A" | "master";
   } | null>(null);
+  const [infoNode, setInfoNode] = useState<{ id: number; title: string } | null>(null);
   const pollRef = useRef<number | null>(null);
   const wasGenerating = useRef(false);
   const [jobWatch, setJobWatch] = useState(false);
@@ -256,6 +258,7 @@ export function TreeView({ subjectId }: { subjectId: number }) {
             onJobStarted={notifyJobStarted}
             onReviewCards={(id, title) => setCardNode({ id, title })}
             onValidate={(id, title, track) => setValidateNode({ id, title, track })}
+            onInfo={(id, title) => setInfoNode({ id, title })}
           />
         ))}
       </div>
@@ -279,6 +282,13 @@ export function TreeView({ subjectId }: { subjectId: number }) {
           onComplete={refresh}
         />
       )}
+      {infoNode && (
+        <SubsectionInfoModal
+          nodeId={infoNode.id}
+          title={infoNode.title}
+          onClose={() => setInfoNode(null)}
+        />
+      )}
     </div>
   );
 }
@@ -295,6 +305,7 @@ function NodeRow({
   onJobStarted,
   onReviewCards,
   onValidate,
+  onInfo,
 }: {
   node: TreeNode;
   depth: number;
@@ -307,6 +318,7 @@ function NodeRow({
   onJobStarted: () => void;
   onReviewCards: (id: number, title: string) => void;
   onValidate: (id: number, title: string, track: "A" | "master") => void;
+  onInfo: (id: number, title: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [renaming, setRenaming] = useState(false);
@@ -385,6 +397,20 @@ function NodeRow({
           <span className="badge exc" title="Some chunks failed — see error details above">
             failed
           </span>
+        )}
+
+        {node.tier === "subheader" && (
+          <button
+            type="button"
+            className="ghost"
+            title="View parse details and tag counts"
+            onClick={(e) => {
+              e.stopPropagation();
+              onInfo(node.id, node.title);
+            }}
+          >
+            info
+          </button>
         )}
 
         {editable && (
@@ -492,6 +518,7 @@ function NodeRow({
             onJobStarted={onJobStarted}
             onReviewCards={onReviewCards}
             onValidate={onValidate}
+            onInfo={onInfo}
           />
         ))}
     </div>

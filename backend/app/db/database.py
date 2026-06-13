@@ -31,6 +31,8 @@ def _migrate(conn: sqlite3.Connection) -> None:
         conn.execute(
             "ALTER TABLE subjects ADD COLUMN is_iad INTEGER NOT NULL DEFAULT 0"
         )
+    if "printed_page_map" not in subj_cols:
+        conn.execute("ALTER TABLE subjects ADD COLUMN printed_page_map TEXT")
     card_cols = {row[1] for row in conn.execute("PRAGMA table_info(cards)").fetchall()}
     if "card_index" not in card_cols:
         conn.execute(
