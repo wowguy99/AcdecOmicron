@@ -1,0 +1,60 @@
+---
+description: Preserve PDF fact order when changing parsing, generation, cards, or export
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Card ordering (PDF reading order)
+
+Cards must always appear in the same order facts appear in the guide PDF: **section → subheader → body before captions → chunk → card (top-to-bottom in source text)**.
+
+Any change that touches parsing, tree structure, chunking, card insert/save, listing, export, import, or validation **must preserve or restore this order**.
+
+## Canonical ordering (do not diverge)
+
+1. **Query/export order** — Use `CARD_ORDER_FROM` + `CARD_ORDER_BY` from `backend/app/generation/compile.py`. Never use `ORDER BY cards.id` alone for user-visible card lists or exports.
+
+2. **Within a subsection (node + track)** — Set `cards.card_index` sequentially against the full node body/caption text:
+   - AI cards: insert then `reorder_node_cards_in_db(conn, node_id, track)` in `_save_cards`.
+   - Deterministic cards (glossary, timeline, piece_year): `enumerate` in PDF parse order.
+   - Reordering existing rows: `reorder_node_cards_in_db` (preferred) or `reorder_chunk_cards_in_db`.
+   - Validation: auto-reorders on run, then `detect_order_inversions` flags residual issues as `out_of_order`.
+
+3. **Tree structure** — Node `order_index`, `start_page`, and `start_line` from the parser drive cross-subheader order. Parser or blueprint changes must keep subsection sequence aligned with the TOC/body.
+
+## When your change might affect order
+
+| Area | Requirement |
+|------|-------------|
+| `parsing/structure.py`, upload/merge | Subheaders keep correct `order_index`; add/run parser tests if TOC logic changes |
+| `generation/worker.py` | New card inserts include `card_index`; AI saves call `reorder_node_cards_in_db` after each chunk |
+| `generation/compile.py` | Extend `CARD_ORDER_BY` only in ways that still reflect PDF order |
+| `transfer.py`, `main.py`, `validation/` | Card reads/exports use `CARD_ORDER_BY`; imports persist `card_index` |
+| `db/` schema/migrations | Backfill or reorder `card_index` when migrating existing cards |
+
+## Tests required
+
+Update or add cases in `backend/tests/test_card_order.py` when ordering behavior changes. At minimum:
+
+- Export order survives inserts done in reverse order
+- Within-chunk reordering matches source text (`order_cards_by_source_text`)
+
+## Anti-patterns
+
+```python
+# BAD — insertion / SQLite id order
+"SELECT * FROM cards WHERE node_id = ? ORDER BY id"
+
+# GOOD
+f"SELECT c.* {CARD_ORDER_FROM} WHERE ... {CARD_ORDER_BY}"
+```
+
+```python
+# BAD — save AI cards in JSON array order without source alignment
+for c in cards:
+    INSERT ...
+
+# GOOD
+# insert cards, then:
+reorder_node_cards_in_db(conn, node_id, track)
+```

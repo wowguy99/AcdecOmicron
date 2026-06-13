@@ -1,0 +1,65 @@
+---
+description: Keep subheader body_text slices from bleeding into adjacent subsections on two-column pages
+globs: backend/**/*.py
+alwaysApply: false
+---
+
+# Subheader boundaries (no cross-subsection bleed)
+
+Each subheader node's `body_text` is the **only** source for its Track A chunks and cards. Text from the **next** TOC subheader must never appear in the previous subsection's body.
+
+## Root cause to prevent
+
+On two-column spreads, the next subheader anchor often sits at the **bottom of the left column** while that subsection's body continues in the **right column** (lower `y0`, higher on the page). Cutting boundary pages by **`y0` alone** pulls the right column into the **previous** subsection when body lines are assembled in **column-major** order.
+
+## Canonical slicing (`structure.py`)
+
+1. **Per-page order** — Use `_page_lines_reading_order()` (column-major: left column fully, then right).
+
+2. **Start page** — Include from the start anchor's **reading-order index** on that page (fallback: `y0 >= start_y` only if the anchor line is missing).
+
+3. **End page** — Include lines **before** the next subheader anchor's **reading-order index** (fallback: `y0 < end_y` only if the anchor line is missing). Do **not** include the anchor heading or anything after it in reading order.
+
+4. **Middle pages** — Include the full reading-ordered page (minus sidebar/credit filters).
+
+5. **Helpers** — `_slice_subheader_body` → `_slice_page_lines` + `_anchor_index_in_reading_order`. Do not reintroduce y-only end cuts on multi-column boundary pages.
+
+## When your change might affect boundaries
+
+| Area | Requirement |
+|------|-------------|
+| `_slice_subheader_body`, `_page_lines_reading_order` | Preserve reading-order anchor cuts; add/run IAD boundary tests |
+| `build_blueprint`, TOC anchors | `start_page` / `end_page` anchors must match lines used for cuts |
+| `generation/worker.py` | Chunks only from the node's own `body_text`; no merge across nodes |
+| Upload / re-parse | Users must re-upload + regenerate after boundary fixes |
+
+## Tests required
+
+Add or update cases in `backend/tests/test_iad_parser.py` when boundary logic changes. At minimum:
+
+- `test_ss_iad_ess_sources_boundary_no_bleed` — ESS must not contain Sources-only phrases (`archives of nature`, proxy definitions); Sources must contain them.
+
+Also run `backend/tests/test_parser.py` (Transportation golden) after structure changes.
+
+## Anti-patterns
+
+```python
+# BAD — end page: exclude by y0 only (right column above anchor y leaks in)
+if pidx == ep and ln.y0 >= end_y:
+    continue
+
+# GOOD — end page: cut reading-order list before next anchor line index
+end_idx = _anchor_index_in_reading_order(ordered, end_line_index)
+for ln in ordered[:end_idx]:
+    ...
+```
+
+```python
+# BAD — assume line index order equals reading order on a page
+for ln in doc.pages[pidx].lines:
+    ...
+
+# GOOD
+for ln in _page_lines_reading_order(page.lines, page.width):
+    ...
+```

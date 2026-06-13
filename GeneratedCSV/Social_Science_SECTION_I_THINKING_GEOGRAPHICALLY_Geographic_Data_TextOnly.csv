@@ -1,0 +1,117 @@
+"Front","Back","Tag"
+"What three types of visual data play a pivotal role in guiding important decisions?","1. Maps
+2. GPS
+3. GIS","other"
+"What four entities make important decisions guided by visual data?","1. Individuals
+2. Governments
+3. Organizations
+4. Businesses","other"
+"How are geographic data presented?","In diverse formats.","other"
+"What three things do diverse formats of geographic data convey?","1. Distinct characteristics
+2. Relationships
+3. Patterns","other"
+"What do individuals utilize to facilitate their movements?","Navigation applications.","other"
+"What kind of data do navigation applications leverage?","Real-time GPS data.","other"
+"What is one reason individuals share their locations with close relatives and loved ones?","To enhance safety.","other"
+"What do individuals affix to valuable possessions to enhance safety?","Traceable tags.","other"
+"What three things does GPS technology assist in tracking for individuals?","1. Step count
+2. Calories expended
+3. Distances traversed","other"
+"Describe the prevalence of GPS tools.","Widespread, making it challenging for many to imagine giving up such conveniences.","other"
+"What four strategies do organizations refine using geographic data for their goods and services?","1. Transportation
+2. Production
+3. Distribution
+4. Profitability","other"
+"What two aspects of a customer base do businesses consider when identifying optimal locations?","1. Number
+2. Density","other"
+"What is one factor businesses consider when identifying optimal locations, besides customer base number and density?","Proximity to competitors.","other"
+"What do businesses ensure by identifying optimal locations considering customer base and competitor proximity?","They locate strategically.","other"
+"What enables companies to align their offerings with the needs of the population?","Analyzing the demographics of prospective customers.","other"
+"What two things facilitate more efficient deliveries and service fulfillment?","1. Enhanced navigation
+2. Route optimization","other"
+"What two things does geographic data amplify and broaden for businesses?","1. Business capabilities
+2. Impact on cultural and natural environments","other"
+"What do governments leverage geographic data to significantly enhance?","Urban planning.","other"
+"What three types of essential public services are subject to placement decisions guided by geographic data in urban planning?","1. Schools
+2. Public safety offices
+3. Other essential public services","other"
+"What two aspects of roads and transportation networks does geographic information guide?","1. Construction
+2. Routing","other"
+"What two things are optimized by geographic information guiding the construction and routing of roads and transportation networks?","1. Safety
+2. Efficiency","other"
+"What two types of events do government agencies prepare for and respond to with the help of geographic data?","1. Natural disasters
+2. Emergencies","other"
+"What two actions by governments rely on geographic information and consultation with experts?","1. Making laws
+2. Allocating resources","other"
+"What is collected to gather basic demographic details?","Census data.","other"
+"What two basic demographic details are gathered by census data?","1. Race
+2. Housing status","other"
+"What two factors can guide where funding is distributed and services are enhanced?","1. Population density
+2. Areas of need","other"
+"What two services can be enhanced based on understanding population density and areas of need?","1. Transportation
+2. Education","other"
+"What do political parties utilize to establish voting boundaries?","Demographic and geographic data.","other"
+"What is gerrymandering?","The deliberate configuration of voting boundaries to favor a particular political party.","other"
+"What two contrasting effects can geographic information have?","1. Improve public services
+2. Undermine democratic processes","other"
+"What concept illustrates the political ramifications of geographic data?","Gerrymandering.","other"
+"What is one political ramification of geographic data illustrated by gerrymandering?","Data manipulation or overcounting to increase public service funding.","other"
+"What two types of consequences does geographic data carry, besides political effects?","1. Social
+2. Economic","other"
+"What two things are influenced by geographic data's social and economic consequences?","1. Resource accessibility
+2. Product placement and availability","other"
+"What two factors determine resource accessibility and product placement/availability according to geographic data's social and economic consequences?","1. Income level
+2. Cultural background of a given region","other"
+"What three ways can spatial data be presented on a map for spatial analysis?","1. Specific graphs
+2. Tables
+3. Other visual aids","other"
+"What can spatial analysis offer when spatial data is presented on a map?","A comprehensive understanding of the physical landscape and human interaction with it and each other.","other"
+"What are the two main types of geographic data?","Spatial data and non-spatial data","other"
+"What does spatial data provide information about?","Physical information about a location","other"
+"What are examples of references for spatial data?","Maps, satellite images, and GPS coordinates","other"
+"What does non-spatial data describe?","Characteristics of a location","other"
+"What are examples of non-spatial data?","Population, income, or land use","other"
+"What can geographic data help identify?","Patterns and study human-environment interactions","other"
+"What kind of information can geographic data provide about travel?","Where, how, and why people or goods travel between locations","other"
+"What can geographic data reveal about resource distribution?","Whether resources are distributed evenly, who can access them, who cannot, and the reasons behind these differences","other"
+"What insights can geographic data provide into urban development?","How cities are constructed, what materials are chosen, and who gains the greatest advantages from particular building styles","other"
+"What do geographers analyze geographic data to see?","How human actions impact the natural world","other"
+"Who are some professionals who use geographic data analysis?","Land managers, city developers, government officials, political activists, land surveyors, park rangers","other"
+"What is field data?","Geographic information collected by experts onsite","other"
+"What are examples of valuable field data?","Surveys, photographs, notes, and interview transcripts","other"
+"What does GIS stand for?","Geographic Information System","other"
+"What does a Geographic Information System (GIS) do?","Superimposes layers of data onto a location to reveal connections and patterns","other"
+"Give an example of how GIS can help identify areas lacking access to quality food.","By combining population statistics with grocery store locations","other"
+"What does GPS stand for?","Global Positioning System","other"
+"What does GPS rely on to pinpoint an object's precise position?","Location data","other"
+"What devices often depend on GPS for accurate navigation?","Cell phones, vehicles, and delivery trucks","other"
+"What does remote sensing utilize to gather spatial information?","Satellites and aircraft","other"
+"What can remote sensing enable?","Mapping of wide regions, monitoring of weather changes, and detailed studies of how people interact with their surroundings","other"
+"What is quantitative data in geography?","Data where geographers use mathematical and statistical models to present and analyze locations","other"
+"What is qualitative data linked to in geography?","A human-centered perspective","other"
+"How is qualitative data typically gathered?","Interviewing people, making firsthand observations, or analyzing texts, art, historical maps, and various archives","other"
+"What types of materials can provide both qualitative and quantitative insights into geography?","Travel journals, photographs, primary documents, and news records","other"
+"What does modern technology like online interactive tools allow for?","Timely, public access to geographic information","other"
+"What are toponyms?","The name identifiers of locations","other"
+"Give an example of a toponym.","St. Louis, the Gulf Coast","other"
+"What are natural features?","Characteristics of a location shaped by natural processes","other"
+"What are examples of natural features?","Lakes, rivers, mountain ranges, hillsides, and valleys","other"
+"What are human features?","Characteristics of a location shaped by human processes","other"
+"What are examples of human features?","Cities, roads, townships, and outdoor art exhibits","other"
+"What does the unprecedented availability of geographic information make more accessible?","Navigation and comprehension of the Earth’s geography","other"
+"What do technologies enable regarding human land utilization?","Comprehensive examination of human land utilization and its implications for both individuals and communities","other"
+"What are the different types of land use?","Residential use, agricultural use, commercial use, and industrial use","other"
+"What does residential land use illustrate?","How people adapt natural spaces and resources to construct dwellings","other"
+"What does agricultural land use pertain to?","The commercialization and production of natural resources for consumption","other"
+"What does commercial land use demonstrate?","The application of locations and resources to generate economic value","other"
+"What does industrial land use refer to?","The allocation of land and materials for manufacturing purposes","other"
+"What shapes the influence of land use patterns on natural landscapes?","The economic and cultural priorities of the societies in each location, as well as their interconnected regions","other"
+"What is a cultural landscape?","The natural environment that has been altered by humans to reflect the distinctive characteristics of a specific culture or society","other"
+"What do agricultural and residential practices reflect in the Philippines example?","A cultural landscape","other"
+"What do advanced technologies like GPS and mobile phone applications facilitate regarding data collection?","Collection of data about individuals residing within specific geographic locations","other"
+"What can these technologies enable the determination of?","Total population figures as well as the distribution of population density across various areas","other"
+"What insights can these technologies provide into demographic variables?","Age, gender, income, ethnicity, birth and death rates, and life expectancy","other"
+"What is this comprehensive demographic information integral to for geographers?","Analysis of spatial patterns and their underlying causes","other"
+"Which projection aims for a balanced look that defines most world maps?","The Robinson projection","other"
+"What can demographic shifts reveal?","Significant patterns","other"
+"What do significant patterns prompt?","Informed human responses","other"

@@ -1,0 +1,24 @@
+---
+description: Use ./guides PDFs for AcDec guide references and examples
+alwaysApply: true
+---
+
+# AcDec Guide PDFs
+
+When the user asks about a specific PDF, or a PDF is needed for an example, answer, or implementation context, use the files in `./guides/`.
+
+## Available guides
+
+- `ArtRG_Transportation.pdf`
+- `ART_IAD.pdf`
+- `MusicRG_Transportation.pdf`
+- `SocialScienceRG_Transportation.pdf`
+- `SocialScience_IAD.pdf`
+
+## Required behavior
+
+1. **Specific PDF named** — Read or reference the matching file from `./guides/`. Do not assume content from memory.
+2. **PDF needed but not specified** — Ask which guide to use. List the available PDFs above and wait for the user to choose before proceeding.
+3. **Ambiguous reference** — If the user says "the guide", "the PDF", or names a subject without a clear file (e.g. "art guide" could mean `ART_IAD.pdf` or `ArtRG_Transportation.pdf`), ask which file they mean.
+
+Do not invent guide content or pick a PDF silently when the request is ambiguous.

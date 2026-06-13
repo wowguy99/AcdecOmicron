@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# App data / secrets
+backend/data/*.db
+backend/data/uploads/
+backend/data/config.json
+*.key
+tools/license_private_key.pem
+
+# Installer build output
+packaging/build/
+packaging/dist/
+packaging/dist-build/
+packaging/build-build/
+packaging/output/
+
+# Node / frontend
+node_modules/
+frontend/dist/
+.vite/
+
+# OS / editor
+.DS_Store
+Thumbs.db
