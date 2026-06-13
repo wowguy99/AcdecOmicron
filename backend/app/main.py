@@ -425,6 +425,18 @@ def regenerate(node_id: int) -> dict:
     }
 
 
+# --- subsection info --------------------------------------------------------
+
+@app.get("/api/nodes/{node_id}/info")
+def subsection_info(node_id: int) -> dict:
+    try:
+        return service.get_subsection_info(node_id)
+    except KeyError:
+        raise HTTPException(404, "Node not found.")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
 # --- card review ------------------------------------------------------------
 
 @app.get("/api/nodes/{node_id}/cards")

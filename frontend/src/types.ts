@@ -4,6 +4,30 @@ export interface TagInfo {
   builtin: number;
 }
 
+export interface SubsectionTagCount {
+  name: string;
+  definition: string;
+  builtin: number;
+  count: number;
+}
+
+export interface SubsectionInfo {
+  node_id: number;
+  title: string;
+  section_type: string;
+  subheader_kind: string;
+  first_sentence: string;
+  last_sentence: string;
+  pdf_start_page: number | null;
+  pdf_end_page: number | null;
+  printed_start_page: number | null;
+  printed_end_page: number | null;
+  body_char_count: number;
+  caption_char_count: number;
+  cards_total: number;
+  tag_counts: SubsectionTagCount[];
+}
+
 export interface TreeNode {
   id: number;
   title: string;

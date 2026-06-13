@@ -1,4 +1,4 @@
-import type { Card, LicenseStatus, ProviderConfig, SubjectSummary, Tree, ValidationReport } from "./types";
+import type { Card, LicenseStatus, ProviderConfig, SubjectSummary, SubsectionInfo, Tree, ValidationReport } from "./types";
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -161,4 +161,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ track }),
     }).then((r) => j<{ ok: boolean; validated: boolean }>(r)),
+
+  getSubsectionInfo: (nodeId: number) =>
+    fetch(`/api/nodes/${nodeId}/info`).then((r) => j<SubsectionInfo>(r)),
 };

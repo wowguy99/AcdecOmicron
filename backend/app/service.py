@@ -1,6 +1,7 @@
 """Application services: persist blueprints, expose the tree, edit nodes."""
 from __future__ import annotations
 
+import json
 import sqlite3
 from typing import Any, Optional
 
@@ -15,6 +16,8 @@ from .generation.worker import (
 from .parsing.captions import attach_captions
 from .parsing.navigation import strip_guide_navigation
 from .parsing.deterministic import glossary_cards, timeline_cards
+from .parsing.pages import pdf_page_to_printed
+from .parsing.snippets import first_last_sentences
 from .parsing.structure import build_blueprint, collapse_duplicate_singletons
 from .validation.runner import rollup_section_validated
 
@@ -44,11 +47,13 @@ def create_subject_from_pdf(
                 sub.body_text = strip_guide_navigation(sub.body_text)
     collapse_duplicate_singletons(sections)
 
+    page_map_json = json.dumps({str(k): v for k, v in doc.printed_to_index.items()})
+
     with get_conn() as conn:
         cur = conn.execute(
-            "INSERT INTO subjects (name, filename, pdf_path, page_count, status, is_iad) "
-            "VALUES (?, ?, ?, ?, 'uploaded', ?)",
-            (name, filename, pdf_path, doc.page_count, 1 if is_iad else 0),
+            "INSERT INTO subjects (name, filename, pdf_path, page_count, status, is_iad, "
+            "printed_page_map) VALUES (?, ?, ?, ?, 'uploaded', ?, ?)",
+            (name, filename, pdf_path, doc.page_count, 1 if is_iad else 0, page_map_json),
         )
         subject_id = cur.lastrowid
 
@@ -249,6 +254,100 @@ def get_tree(subject_id: int) -> dict[str, Any]:
         "chunk_errors": chunk_errors,
         "sections": section_dicts,
     }
+
+
+def _load_printed_page_map(raw: str | None) -> dict[int, int]:
+    if not raw:
+        return {}
+    data = json.loads(raw)
+    return {int(k): int(v) for k, v in data.items()}
+
+
+def get_subsection_info(node_id: int) -> dict[str, Any]:
+    """Return parse metadata and tag counts for a subheader node."""
+    with get_conn() as conn:
+        node = conn.execute("SELECT * FROM nodes WHERE id = ?", (node_id,)).fetchone()
+        if not node:
+            raise KeyError("node not found")
+        if node["tier"] != "subheader":
+            raise ValueError("info is only available for subheader nodes")
+
+        subj = conn.execute(
+            "SELECT printed_page_map FROM subjects WHERE id = ?",
+            (node["subject_id"],),
+        ).fetchone()
+        page_map = _load_printed_page_map(
+            subj["printed_page_map"]
+            if subj and "printed_page_map" in subj.keys()
+            else None
+        )
+
+        body = node["body_text"] or ""
+        caption = node["caption_text"] or ""
+        first, last = first_last_sentences(body)
+
+        start_page = node["start_page"]
+        end_page = node["end_page"]
+        pdf_start = int(start_page) + 1 if start_page is not None else None
+        pdf_end = int(end_page) + 1 if end_page is not None else None
+        printed_start = (
+            pdf_page_to_printed(int(start_page), page_map)
+            if start_page is not None and page_map
+            else None
+        )
+        printed_end = (
+            pdf_page_to_printed(int(end_page), page_map)
+            if end_page is not None and page_map
+            else None
+        )
+
+        tag_rows = conn.execute(
+            "SELECT tag, COUNT(*) AS n FROM cards "
+            "WHERE node_id = ? AND deleted = 0 GROUP BY tag",
+            (node_id,),
+        ).fetchall()
+        counts_by_tag = {r["tag"]: int(r["n"]) for r in tag_rows}
+        cards_total = sum(counts_by_tag.values())
+
+        subject_tags = _tags(conn, node["subject_id"])
+        tag_counts = [
+            {
+                "name": t["name"],
+                "definition": t["definition"],
+                "builtin": t["builtin"],
+                "count": counts_by_tag.get(t["name"], 0),
+            }
+            for t in subject_tags
+        ]
+        known = {t["name"] for t in subject_tags}
+        for tag, count in counts_by_tag.items():
+            if tag not in known:
+                tag_counts.append(
+                    {"name": tag, "definition": "", "builtin": 0, "count": count}
+                )
+
+        subheader_kind = (
+            node["subheader_kind"]
+            if "subheader_kind" in node.keys()
+            else ""
+        ) or ""
+
+        return {
+            "node_id": node_id,
+            "title": node["title"],
+            "section_type": node["section_type"],
+            "subheader_kind": subheader_kind,
+            "first_sentence": first,
+            "last_sentence": last,
+            "pdf_start_page": pdf_start,
+            "pdf_end_page": pdf_end,
+            "printed_start_page": printed_start,
+            "printed_end_page": printed_end,
+            "body_char_count": len(body),
+            "caption_char_count": len(caption),
+            "cards_total": cards_total,
+            "tag_counts": tag_counts,
+        }
 
 
 # --- node editing (editable approval gate) ---------------------------------
