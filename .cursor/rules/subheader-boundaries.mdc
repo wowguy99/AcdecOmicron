@@ -14,7 +14,7 @@ On two-column spreads, the next subheader anchor often sits at the **bottom of t
 
 ## Canonical slicing (`structure.py`)
 
-1. **Per-page order** — Use `_page_lines_reading_order()` (column-major: left column fully, then right).
+1. **Per-page order** — Use `_page_lines_reading_order()` (column-major: left column fully, then right). Column detection must be robust: gap clustering on `x0` collapses when a full-width banner, figure, or staggered indent **bridges the gutter**, so a midline fallback (`_split_two_columns_by_midline`) recovers the two columns. If detection silently falls back to row-wise `(y0, x0)`, the right column leaks in front of lower left-column content — the bleed bug. Never rely on `_TOC_COLUMN_GAP` clustering alone for body pages.
 
 2. **Start page** — Include from the start anchor's **reading-order index** on that page (fallback: `y0 >= start_y` only if the anchor line is missing).
 
@@ -37,7 +37,7 @@ On two-column spreads, the next subheader anchor often sits at the **bottom of t
 
 Add or update cases in `backend/tests/test_iad_parser.py` when boundary logic changes. At minimum:
 
-- `test_ss_iad_ess_sources_boundary_no_bleed` — ESS must not contain Sources-only phrases (`archives of nature`, proxy definitions); Sources must contain them.
+- `test_ss_iad_section_i_subheaders_2_and_3_no_cross_bleed` — Social Science IAD Section I: subheader 2 (ESS) and subheader 3 (Sources) must not share each other's body phrases; page 9 must stay column-major at the boundary.
 
 Also run `backend/tests/test_parser.py` (Transportation golden) after structure changes.
 

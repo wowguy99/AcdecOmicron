@@ -396,27 +396,68 @@ def _column_index(columns: list[list[float]], x: float) -> int:
     return min(range(len(columns)), key=lambda i: abs(x - columns[i][0]))
 
 
+def _split_two_columns_by_midline(
+    lines: list[Line], page_width: float
+) -> Optional[tuple[list[Line], list[Line]]]:
+    """Split a two-column page at the page midline (robust to gutter-spanning lines).
+
+    Gap clustering on ``x0`` collapses when a single full-width banner, figure,
+    or staggered indent bridges the gutter; a midline split does not. Returns
+    ``(left, right)`` covering every line, or ``None`` when the page is not a
+    genuine two-column spread (so the caller can fall back to top-to-bottom).
+    """
+    if page_width <= 0:
+        return None
+    mid = page_width / 2.0
+    margin = max(20.0, page_width * 0.04)
+    left = [ln for ln in lines if ln.x0 <= mid - margin]
+    right = [ln for ln in lines if ln.x0 >= mid + margin]
+    # Both columns must be substantially populated for this to be a real spread.
+    if len(left) < 3 or len(right) < 3:
+        return None
+    # The columns must overlap vertically; otherwise this is a single column
+    # with a corner title or a few right-aligned captions, not two columns.
+    left_lo, left_hi = min(l.y0 for l in left), max(l.y0 for l in left)
+    right_lo, right_hi = min(l.y0 for l in right), max(l.y0 for l in right)
+    if min(left_hi, right_hi) - max(left_lo, right_lo) <= 0:
+        return None
+    # Lines starting inside the gutter band are ambiguous; assign by nearest side
+    # so no line is dropped from the slice.
+    for ln in lines:
+        if mid - margin < ln.x0 < mid + margin:
+            (left if ln.x0 < mid else right).append(ln)
+    return left, right
+
+
 def _page_lines_reading_order(lines: list[Line], page_width: float) -> list[Line]:
     """Return page lines in human reading order (column-major on two-column spreads).
 
-  Single-column pages sort top-to-bottom. Multi-column pages read each column
-  fully (top-to-bottom, left-to-right) instead of row-wise ``(y0, x0)`` bands.
+    Single-column pages sort top-to-bottom. Multi-column pages read each column
+    fully (top-to-bottom, left-to-right) instead of row-wise ``(y0, x0)`` bands,
+    so the right column is never pulled in front of lower-but-later left content.
     """
     if not lines:
         return []
     xs = sorted({ln.x0 for ln in lines})
     columns = _cluster_columns(xs, gap=_TOC_COLUMN_GAP)
-    if len(columns) < 2:
-        return sorted(lines, key=lambda l: (l.y0, l.x0))
+    if len(columns) >= 2:
+        buckets: list[list[Line]] = [[] for _ in columns]
+        for ln in lines:
+            buckets[_column_index(columns, ln.x0)].append(ln)
+        out: list[Line] = []
+        for bucket in buckets:
+            out.extend(sorted(bucket, key=lambda l: (l.y0, l.x0)))
+        return out
 
-    buckets: list[list[Line]] = [[] for _ in columns]
-    for ln in lines:
-        buckets[_column_index(columns, ln.x0)].append(ln)
-
-    out: list[Line] = []
-    for bucket in buckets:
-        out.extend(sorted(bucket, key=lambda l: (l.y0, l.x0)))
-    return out
+    # Gap clustering can collapse to one column when a line bridges the gutter.
+    # Recover the two-column layout via the page midline before giving up.
+    grouped = _split_two_columns_by_midline(lines, page_width)
+    if grouped is not None:
+        left, right = grouped
+        return sorted(left, key=lambda l: (l.y0, l.x0)) + sorted(
+            right, key=lambda l: (l.y0, l.x0)
+        )
+    return sorted(lines, key=lambda l: (l.y0, l.x0))
 
 
 def _level_raws(raws: list[_RawToc], doc: Document) -> list[TocEntry]:

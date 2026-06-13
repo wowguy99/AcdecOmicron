@@ -185,6 +185,35 @@ def test_page_lines_reading_order_is_column_major():
     assert ordered == ["left top", "left second", "right top", "right second"]
 
 
+def test_reading_order_survives_gutter_bridging_lines():
+    """A line bridging the gutter must not collapse columns into row-wise order.
+
+    Staggered x0 values defeat gap clustering (no single >=gap break), which
+    previously fell back to ``(y0, x0)`` order and pulled the vertically-higher
+    right column in front of lower left-column content (cross-subsection bleed).
+    """
+    from app.parsing.spans import Line
+    from app.parsing.structure import _page_lines_reading_order
+
+    lines = [
+        Line(0, 0, "R1", 10.0, False, False, 90.0, 340.0),
+        Line(0, 1, "L1", 10.0, False, False, 100.0, 55.0),
+        Line(0, 2, "R2", 10.0, False, False, 110.0, 340.0),
+        Line(0, 3, "L2", 10.0, False, False, 120.0, 55.0),
+        Line(0, 4, "R3", 10.0, False, False, 130.0, 340.0),
+        Line(0, 5, "L3", 10.0, False, False, 140.0, 55.0),
+        # Gutter-bridging / staggered lines that collapse gap clustering.
+        Line(0, 6, "B1", 10.0, False, False, 200.0, 130.0),
+        Line(0, 7, "B2", 10.0, False, False, 205.0, 205.0),
+        Line(0, 8, "B3", 10.0, False, False, 210.0, 280.0),
+    ]
+    ordered = [ln.text for ln in _page_lines_reading_order(lines, 612.0)]
+    # Every right-column line must come after every left-column line.
+    last_left = max(ordered.index(t) for t in ("L1", "L2", "L3", "B1", "B2", "B3"))
+    first_right = min(ordered.index(t) for t in ("R1", "R2", "R3"))
+    assert last_left < first_right, ordered
+
+
 def test_ss_iad_section_ii_intro_two_column_reading_order(ss_iad_blueprint):
     """Body text must read left column fully before right column (not row-wise)."""
     _, sections = ss_iad_blueprint
@@ -206,23 +235,78 @@ def test_ss_iad_section_ii_intro_two_column_reading_order(ss_iad_blueprint):
     assert holocene_date >= 0 and holocene_date < homo
 
 
-def test_ss_iad_ess_sources_boundary_no_bleed(ss_iad_blueprint):
-    """ESS body must not include Sources prose from the right column on page 9."""
-    _, sections = ss_iad_blueprint
+def test_ss_iad_section_i_subheaders_2_and_3_no_cross_bleed(ss_iad_blueprint):
+    """Regression: Section I subheaders 2 (ESS) and 3 (Sources) must not bleed.
+
+    Social Science IAD, Section I — the canonical two-column boundary case:
+    subheader 2 ends at the bottom of the left column on page 9 while subheader 3
+    body continues in the right column above the Sources heading anchor. Future
+    changes to ``_page_lines_reading_order`` or ``_slice_subheader_body`` must
+    keep each subsection's ``body_text`` isolated so generated cards do not mix.
+    """
+    doc, sections = ss_iad_blueprint
     sec1 = next(
         s for s in sections
         if s.title.startswith("SECTION I:") and s.section_type == "BODY"
     )
-    ess = next(s for s in sec1.subheaders if "Essential Concepts" in s.title)
-    sources = next(
-        s for s in sec1.subheaders if s.title.startswith("Sources for Reconstructing")
-    )
+    assert len(sec1.subheaders) >= 3, "expected Section I Introduction + ESS + Sources"
+    ess = sec1.subheaders[1]
+    sources = sec1.subheaders[2]
+    assert "Essential Concepts" in ess.title
+    assert sources.title.startswith("Sources for Reconstructing")
+
+    # Both subheaders meet on the same spread (page 9 in the current guide).
+    assert ess.end_page == sources.start_page == 9
+
     ess_body = (ess.body_text or "").lower()
     src_body = (sources.body_text or "").lower()
-    assert "archives of nature" not in ess_body
-    assert "called a proxy" not in ess_body and " is called a proxy" not in ess_body
+
+    # Subheader 2 (ESS) — own content present.
+    assert "negative feedback" in ess_body
+    assert "positive feedback" in ess_body
+
+    # Subheader 2 must not include subheader 3 prose from the right column.
+    ess_forbidden = (
+        "archives of nature",
+        "archives of society",
+        " is called a proxy",
+        " called a proxy",
+    )
+    for phrase in ess_forbidden:
+        assert phrase not in ess_body, (
+            f"ESS (subheader 2) bleeds Sources (subheader 3): found {phrase!r}"
+        )
+
+    # Subheader 3 (Sources) — own content present.
     assert "archives of nature" in src_body
+    assert "proxy" in src_body
     assert "ice core" in src_body
+
+    # Subheader 3 must not include subheader 2 prose.
+    for phrase in ("negative feedback", "positive feedback"):
+        assert phrase not in src_body, (
+            f"Sources (subheader 3) bleeds ESS (subheader 2): found {phrase!r}"
+        )
+
+    # Low-level guard: page 9 column-major order places all left-column ESS tail
+    # (including the Sources heading anchor) before right-column Sources body.
+    from app.parsing.structure import _page_lines_reading_order
+
+    page = doc.pages[9]
+    ordered = _page_lines_reading_order(page.lines, page.width)
+    texts = [ln.text.lower() for ln in ordered]
+    feedback_idxs = [i for i, t in enumerate(texts) if "negative feedback" in t]
+    archives_idxs = [i for i, t in enumerate(texts) if "archives of nature" in t]
+    assert feedback_idxs and archives_idxs, "expected ESS/Sources markers on page 9"
+    assert max(feedback_idxs) < min(archives_idxs), (
+        "page 9 reading order must be column-major at the ESS/Sources boundary; "
+        f"got feedback@{max(feedback_idxs)} archives@{min(archives_idxs)}"
+    )
+
+
+def test_ss_iad_ess_sources_boundary_no_bleed(ss_iad_blueprint):
+    """Alias kept for older references — delegates to subheaders 2/3 regression."""
+    test_ss_iad_section_i_subheaders_2_and_3_no_cross_bleed(ss_iad_blueprint)
 
 
 def test_ss_iad_intro_strips_guide_roadmap(ss_iad_blueprint):
