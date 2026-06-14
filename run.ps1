@@ -80,9 +80,11 @@ try {
         Write-Host "Creating virtualenv and installing backend deps..."
         python -m venv "$root\.venv"
         if ($LASTEXITCODE -ne 0) { Fail "Failed to create virtualenv. Is Python installed?" }
-        & "$root\.venv\Scripts\python.exe" -m pip install -r "$root\backend\requirements.txt"
-        if ($LASTEXITCODE -ne 0) { Fail "Failed to install Python dependencies." }
     }
+
+    Write-Host "Syncing Python dependencies..."
+    & "$root\.venv\Scripts\python.exe" -m pip install -r "$root\backend\requirements.txt" -q
+    if ($LASTEXITCODE -ne 0) { Fail "Failed to install Python dependencies." }
 
     $frontendMissing = -not (Test-Path "$root\frontend\dist\index.html")
     $frontendStale = Test-FrontendBuildStale -Root $root

@@ -25,6 +25,27 @@ def test_system_prompt_covers_source_attribution():
     assert "according to" in lower
 
 
+def test_system_prompt_covers_yes_no_guidance():
+    lower = SYSTEM_PROMPT.lower()
+    assert "avoid yes/no backs" in lower or "avoid yes/no" in lower
+    assert "little ice age" in lower
+    assert "single, unified event" in lower
+
+
+def test_user_prompt_mentions_yes_no_guidance():
+    from app.generation.prompt import build_user_prompt
+
+    prompt = build_user_prompt(
+        subject="Social Science",
+        section="SECTION III",
+        subheader="Climate",
+        tags=[("date", "years and eras")],
+        track="A",
+        text="The LIA impacted regions unevenly.",
+    )
+    assert "substantive backs over yes/no" in prompt.lower()
+
+
 def test_user_prompt_mentions_source_attribution():
     from app.generation.prompt import build_user_prompt
 

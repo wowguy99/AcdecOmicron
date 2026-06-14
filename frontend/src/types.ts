@@ -141,6 +141,14 @@ export interface ProviderConfig {
   rpm: number;
   rpd: number;
   temperature: number;
+  text_export_format: "csv" | "google_sheet";
+  google_client_id: string;
+  google_connected: boolean;
+}
+
+export interface SheetExportResult {
+  url: string;
+  format: "google_sheet";
 }
 
 export type LicenseStatusCode =

@@ -8,8 +8,17 @@ from app.db.database import get_conn, init_db
 from app.generation.compile import (
     WINDOWS_MAX_FILENAME,
     build_csv_filename,
+    cards_to_csv,
     resolve_node_filename_parts,
 )
+
+
+def test_cards_to_csv_has_no_header_row():
+    text = cards_to_csv([{"front": "Q?", "back": "A", "tag": "other"}])
+    lines = text.strip().split("\n")
+    assert len(lines) == 1
+    assert lines[0] == '"Q?","A","other"'
+    assert "Front" not in text
 
 
 def test_build_csv_filename_section_only():

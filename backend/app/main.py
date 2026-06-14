@@ -8,7 +8,7 @@ from typing import Optional
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -35,6 +35,12 @@ from .generation.compile import (
     build_csv_filename,
     resolve_node_filename_parts,
     track_filter_sql,
+)
+from .export.google_sheets import (
+    create_spreadsheet,
+    disconnect_google,
+    finish_oauth,
+    start_oauth,
 )
 from .validation import (
     clear_validation,
@@ -77,6 +83,8 @@ class ConfigIn(BaseModel):
     rpm: int = 15
     rpd: int = 1000
     temperature: float = 0.1
+    text_export_format: str = "csv"
+    google_client_id: Optional[str] = None
 
 
 @app.post("/api/config")
@@ -92,9 +100,54 @@ def post_config(body: ConfigIn) -> dict:
         rpd=body.rpd,
         temperature=body.temperature,
         license_key=current.license_key,
+        text_export_format=body.text_export_format,
+        google_client_id=(
+            body.google_client_id
+            if body.google_client_id is not None
+            else current.google_client_id
+        ),
+        google_refresh_token=current.google_refresh_token,
     )
     save_config(cfg)
     return public_config(cfg)
+
+
+# --- google oauth -----------------------------------------------------------
+
+@app.get("/api/auth/google/start")
+def google_auth_start() -> dict:
+    try:
+        return {"url": start_oauth()}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.get("/api/auth/google/callback")
+def google_auth_callback(code: str = "", state: str = "", error: str = "") -> HTMLResponse:
+    if error:
+        return HTMLResponse(
+            f"<html><body><h2>Google sign-in failed</h2><p>{error}</p>"
+            "<p>You can close this tab and return to the app.</p></body></html>",
+            status_code=400,
+        )
+    try:
+        finish_oauth(code, state or None)
+    except ValueError as exc:
+        return HTMLResponse(
+            f"<html><body><h2>Google sign-in failed</h2><p>{exc}</p>"
+            "<p>You can close this tab and try again from Settings.</p></body></html>",
+            status_code=400,
+        )
+    return HTMLResponse(
+        "<html><body><h2>Google account connected</h2>"
+        "<p>You can close this tab and return to the app.</p></body></html>"
+    )
+
+
+@app.post("/api/auth/google/disconnect")
+def google_auth_disconnect() -> dict:
+    disconnect_google()
+    return public_config(load_config())
 
 
 # --- license ----------------------------------------------------------------
@@ -547,6 +600,63 @@ def complete_validation(node_id: int, body: ValidateIn) -> dict:
             raise HTTPException(404, "Node not found.")
     mark_validated(node_id, body.track)
     return {"ok": True, "validated": True}
+
+
+# --- google sheet export (Text-Only / track A) ------------------------------
+
+@app.post("/api/subjects/{subject_id}/export")
+def export_subject_sheet(subject_id: int) -> dict:
+    cfg = load_config()
+    if cfg.text_export_format != "google_sheet":
+        raise HTTPException(400, "Text export format is not set to Google Sheet.")
+    if not cfg.google_refresh_token:
+        raise HTTPException(401, "Connect a Google account in Settings first.")
+    with get_conn() as conn:
+        subj = conn.execute(
+            "SELECT name FROM subjects WHERE id = ?", (subject_id,)
+        ).fetchone()
+        if not subj:
+            raise HTTPException(404, "Subject not found.")
+        if not subject_download_ready(conn, subject_id):
+            raise HTTPException(
+                403,
+                "Validate every section with cards before exporting the full subject.",
+            )
+        cards = collect_subject_cards(conn, subject_id, "A")
+    filename = build_csv_filename(subj["name"], track="A")
+    try:
+        url = create_spreadsheet(filename, cards)
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, f"Google Sheets export failed: {exc}")
+    return {"url": url, "format": "google_sheet"}
+
+
+@app.post("/api/nodes/{node_id}/export")
+def export_node_sheet(node_id: int) -> dict:
+    cfg = load_config()
+    if cfg.text_export_format != "google_sheet":
+        raise HTTPException(400, "Text export format is not set to Google Sheet.")
+    if not cfg.google_refresh_token:
+        raise HTTPException(401, "Connect a Google account in Settings first.")
+    with get_conn() as conn:
+        subject, section, topic = resolve_node_filename_parts(conn, node_id)
+        if subject == "deck":
+            raise HTTPException(404, "Node not found.")
+        try:
+            require_validated(conn, node_id)
+        except PermissionError as exc:
+            raise HTTPException(403, str(exc))
+        cards = collect_cards(conn, node_id, "A")
+    filename = build_csv_filename(subject, section, topic, track="A")
+    try:
+        url = create_spreadsheet(filename, cards)
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(502, f"Google Sheets export failed: {exc}")
+    return {"url": url, "format": "google_sheet"}
 
 
 # --- downloads --------------------------------------------------------------

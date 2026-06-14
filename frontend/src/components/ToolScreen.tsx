@@ -201,7 +201,10 @@ export function ToolScreen() {
           <button className="link" onClick={() => setActive(null)}>
             ← back to subjects
           </button>
-          <TreeView subjectId={active} />
+          <TreeView
+            subjectId={active}
+            textExportFormat={cfg?.text_export_format ?? "csv"}
+          />
         </>
       )}
     </div>

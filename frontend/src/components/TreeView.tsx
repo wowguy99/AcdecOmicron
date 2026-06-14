@@ -7,7 +7,13 @@ import { ValidateModal } from "./ValidateModal";
 
 const GENERATABLE = new Set(["BODY", "INTRODUCTION", "CONCLUSION"]);
 
-export function TreeView({ subjectId }: { subjectId: number }) {
+export function TreeView({
+  subjectId,
+  textExportFormat = "csv",
+}: {
+  subjectId: number;
+  textExportFormat?: "csv" | "google_sheet";
+}) {
   const [tree, setTree] = useState<Tree | null>(null);
   const [err, setErr] = useState("");
   const [nodeErr, setNodeErr] = useState("");
@@ -241,6 +247,8 @@ export function TreeView({ subjectId }: { subjectId: number }) {
               subjectDownload
               validateHint="Validate each section below first"
               onValidate={() => {}}
+              textExportFormat={textExportFormat}
+              onExportError={setNodeErr}
             />
           </div>
         )}
@@ -259,6 +267,8 @@ export function TreeView({ subjectId }: { subjectId: number }) {
             onReviewCards={(id, title) => setCardNode({ id, title })}
             onValidate={(id, title, track) => setValidateNode({ id, title, track })}
             onInfo={(id, title) => setInfoNode({ id, title })}
+            textExportFormat={textExportFormat}
+            onExportError={setNodeErr}
           />
         ))}
       </div>
@@ -306,6 +316,8 @@ function NodeRow({
   onReviewCards,
   onValidate,
   onInfo,
+  textExportFormat = "csv",
+  onExportError,
 }: {
   node: TreeNode;
   depth: number;
@@ -319,6 +331,8 @@ function NodeRow({
   onReviewCards: (id: number, title: string) => void;
   onValidate: (id: number, title: string, track: "A" | "master") => void;
   onInfo: (id: number, title: string) => void;
+  textExportFormat?: "csv" | "google_sheet";
+  onExportError?: (msg: string) => void;
 }) {
   const [open, setOpen] = useState(true);
   const [renaming, setRenaming] = useState(false);
@@ -499,6 +513,8 @@ function NodeRow({
               setRegenerating(true);
               return onRegenerate(node.id).finally(() => setRegenerating(false));
             }}
+            textExportFormat={textExportFormat}
+            onExportError={onExportError}
           />
         )}
       </div>
@@ -519,6 +535,8 @@ function NodeRow({
             onReviewCards={onReviewCards}
             onValidate={onValidate}
             onInfo={onInfo}
+            textExportFormat={textExportFormat}
+            onExportError={onExportError}
           />
         ))}
     </div>
@@ -539,6 +557,8 @@ function DownloadButtons({
   regenBusy = false,
   jobRunning = false,
   onRegen,
+  textExportFormat = "csv",
+  onExportError,
 }: {
   nodeId: number;
   a: number;
@@ -553,14 +573,36 @@ function DownloadButtons({
   regenBusy?: boolean;
   jobRunning?: boolean;
   onRegen?: () => void | Promise<void>;
+  textExportFormat?: "csv" | "google_sheet";
+  onExportError?: (msg: string) => void;
 }) {
   const hasMaster = a > 0 || b > 0;
   const hasA = a > 0;
+  const [exporting, setExporting] = useState(false);
 
   function downloadHref(track: "A" | "master") {
     if (subjectDownload) return `/api/subjects/${nodeId}/download?track=${track}`;
     return api.downloadUrl(nodeId, track);
   }
+
+  async function exportTextOnly() {
+    if (!validated || !hasA || exporting) return;
+    setExporting(true);
+    onExportError?.("");
+    try {
+      const result = subjectDownload
+        ? await api.exportSubjectSheet(nodeId)
+        : await api.exportNodeSheet(nodeId);
+      window.open(result.url, "_blank", "noopener,noreferrer");
+    } catch (e: unknown) {
+      onExportError?.(e instanceof Error ? e.message : "Google Sheet export failed.");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  const textOnlyEnabled = hasA && validated;
+  const useGoogleSheet = textExportFormat === "google_sheet";
 
   return (
     <span className="dl" onClick={(e) => e.stopPropagation()}>
@@ -587,13 +629,29 @@ function DownloadButtons({
       {subjectDownload && !validated && validateHint && (
         <span className="muted validate-hint">{validateHint}</span>
       )}
-      <a
-        className={hasA && validated ? "" : "disabled"}
-        href={hasA && validated ? downloadHref("A") : undefined}
-        title={validated ? "Download text-only CSV" : "Validate first"}
-      >
-        Text-Only
-      </a>
+      {useGoogleSheet ? (
+        <button
+          type="button"
+          className={`ghost${textOnlyEnabled ? "" : " disabled"}`}
+          disabled={!textOnlyEnabled || exporting}
+          title={
+            validated
+              ? "Create a new Google Sheet with text-only cards"
+              : "Validate first"
+          }
+          onClick={() => void exportTextOnly()}
+        >
+          {exporting ? "Exporting…" : "Text-Only"}
+        </button>
+      ) : (
+        <a
+          className={textOnlyEnabled ? "" : "disabled"}
+          href={textOnlyEnabled ? downloadHref("A") : undefined}
+          title={validated ? "Download text-only CSV" : "Validate first"}
+        >
+          Text-Only
+        </a>
+      )}
       <a
         className={`master ${hasMaster && validated ? "" : "disabled"}`}
         href={hasMaster && validated ? downloadHref("master") : undefined}

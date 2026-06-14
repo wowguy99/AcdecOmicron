@@ -18,6 +18,7 @@ from ..config import load_config
 from ..db.database import get_conn
 from .compile import card_hash, reorder_node_cards_in_db
 from .prompt import SYSTEM_PROMPT, build_user_prompt, chunk_low_yield, parse_cards
+from .yes_no import enhance_yes_no_cards
 from ..parsing.navigation import filter_navigation_cards
 from .providers import ProviderError, RateLimited, get_provider
 
@@ -609,6 +610,7 @@ def _process_chunk(provider, subject_name, chunk, tags) -> tuple[bool, str]:
                 continue
             return False, last_err
         cards = filter_navigation_cards(cards)
+        cards = enhance_yes_no_cards(cards)
         if not cards:
             if chunk_low_yield(chunk["text"]):
                 _save_cards(chunk, [], valid_tags)

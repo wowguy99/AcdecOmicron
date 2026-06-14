@@ -39,6 +39,9 @@ class ProviderConfig(BaseModel):
     rpd: int = 1000
     temperature: float = 0.1
     license_key: str = ""
+    text_export_format: str = "csv"  # csv | google_sheet
+    google_client_id: str = ""
+    google_refresh_token: str = ""
 
 
 def load_config() -> ProviderConfig:
@@ -66,4 +69,6 @@ def public_config(cfg: ProviderConfig) -> dict[str, Any]:
     """Config safe to return to the UI (key masked)."""
     d = cfg.model_dump()
     d["api_key"] = bool(cfg.api_key)  # expose only whether a key is set
+    d["google_connected"] = bool(cfg.google_refresh_token)
+    d.pop("google_refresh_token", None)
     return d

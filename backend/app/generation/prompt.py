@@ -48,7 +48,16 @@ SYSTEM_PROMPT = (
     "9. Return cards in the same order facts appear in the source text "
     "(top to bottom).\n"
     "10. Return ONLY valid JSON, no markdown fences, in this schema: "
-    '{"cards":[{"front":"...","back":"...","tag":"..."}]}'
+    '{"cards":[{"front":"...","back":"...","tag":"..."}]}\n'
+    "11. Avoid Yes/No backs when the source supports a substantive answer. "
+    "For questions about manner, extent, degree, or distribution (evenly, "
+    "uniformly, entirely, completely, always, never, solely, etc.), use an "
+    "open front (\"How did…\", \"To what extent…\") and a short substantive "
+    "back (e.g. front: \"How did the Little Ice Age (LIA) impact the entire "
+    "globe?\" back: \"Unevenly\" — NOT \"Did the LIA impact the entire globe "
+    "evenly?\" / \"No\"). Keep Yes/No only for genuine binary classification "
+    "or occurrence (e.g. \"Was the LIA a single, unified event?\" / \"No\" "
+    "is acceptable)."
 )
 
 
@@ -73,7 +82,9 @@ def build_user_prompt(
         "superlative claims, and source attributions (who a named person, "
         "organization, study, or law is credited with) — each as its own card "
         "with a short back. Skip guide roadmap sentences that only preview what "
-        "another section will discuss.\n\n"
+        "another section will discuss. Prefer substantive backs over Yes/No when "
+        "the text supports manner or extent answers; reserve Yes/No for binary "
+        "classification or occurrence questions.\n\n"
         f"TEXT:\n{text}"
     )
 

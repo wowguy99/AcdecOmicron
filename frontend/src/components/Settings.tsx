@@ -120,6 +120,8 @@ export function Settings({ onSaved }: { onSaved?: () => void }) {
         rpm: cfg!.rpm,
         rpd: cfg!.rpd,
         temperature: cfg!.temperature,
+        text_export_format: cfg!.text_export_format,
+        google_client_id: cfg!.google_client_id,
       });
       setCfg(saved);
       setApiKey("");
@@ -138,6 +140,31 @@ export function Settings({ onSaved }: { onSaved?: () => void }) {
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       setLicenseErr("Could not copy to clipboard.");
+    }
+  }
+
+  async function connectGoogle() {
+    setErr("");
+    setMsg("");
+    try {
+      const { url } = await api.startGoogleAuth();
+      window.open(url, "_blank", "noopener,noreferrer");
+      setMsg("Complete sign-in in the browser tab, then refresh settings.");
+    } catch (e: any) {
+      setErr(e.message);
+    }
+  }
+
+  async function disconnectGoogle() {
+    setErr("");
+    setMsg("");
+    try {
+      const saved = await api.disconnectGoogle();
+      setCfg(saved);
+      setMsg("Google account disconnected.");
+      onSaved?.();
+    } catch (e: any) {
+      setErr(e.message);
     }
   }
 
@@ -207,6 +234,55 @@ export function Settings({ onSaved }: { onSaved?: () => void }) {
         {licenseMsg && <span className="ok" style={{ marginLeft: 12 }}>{licenseMsg}</span>}
       </div>
       {licenseErr && <div className="error">{licenseErr}</div>}
+    </div>
+
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0 }}>Text-Only export</h3>
+      <p className="muted">
+        Choose how validated Text-Only cards are exported. Master downloads always use CSV.
+      </p>
+
+      <label>Format</label>
+      <select
+        value={cfg.text_export_format ?? "csv"}
+        onChange={(e) =>
+          setCfg({
+            ...cfg,
+            text_export_format: e.target.value as "csv" | "google_sheet",
+          })
+        }
+      >
+        <option value="csv">CSV file download</option>
+        <option value="google_sheet">Google Sheet (new sheet each export)</option>
+      </select>
+
+      {cfg.text_export_format === "google_sheet" && (
+        <>
+          <label style={{ marginTop: 12 }}>Google OAuth client ID</label>
+          <input
+            placeholder="From Google Cloud Console (Desktop OAuth client)"
+            value={cfg.google_client_id ?? ""}
+            onChange={(e) => setCfg({ ...cfg, google_client_id: e.target.value })}
+          />
+          <p className="muted">
+            Create a Desktop OAuth client, enable Sheets API, and add redirect URI{" "}
+            <code>http://127.0.0.1:8000/api/auth/google/callback</code>.
+          </p>
+          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <button type="button" className="ghost" onClick={() => void connectGoogle()}>
+              Connect Google account
+            </button>
+            {cfg.google_connected && (
+              <button type="button" className="ghost" onClick={() => void disconnectGoogle()}>
+                Disconnect
+              </button>
+            )}
+            <span className={cfg.google_connected ? "ok" : "muted"}>
+              {cfg.google_connected ? "Connected" : "Not connected"}
+            </span>
+          </div>
+        </>
+      )}
     </div>
 
     <div className="card">

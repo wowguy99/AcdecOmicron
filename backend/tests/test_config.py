@@ -47,3 +47,29 @@ def test_post_config_preserves_license_key(client):
     assert cfg.provider == "groq"
     assert cfg.api_key == "sk-existing"
     assert cfg.license_key == "stored-license-key"
+
+
+def test_post_config_persists_text_export_format(client):
+    save_config(ProviderConfig(provider="gemini", model="gemini-2.5-flash-lite"))
+
+    response = client.post(
+        "/api/config",
+        json={
+            "provider": "gemini",
+            "model": "gemini-2.5-flash-lite",
+            "rpm": 15,
+            "rpd": 1000,
+            "temperature": 0.1,
+            "text_export_format": "google_sheet",
+            "google_client_id": "my-client-id",
+        },
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["text_export_format"] == "google_sheet"
+    assert body["google_client_id"] == "my-client-id"
+    assert body["google_connected"] is False
+
+    cfg = load_config()
+    assert cfg.text_export_format == "google_sheet"
+    assert cfg.google_client_id == "my-client-id"

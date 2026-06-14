@@ -109,7 +109,9 @@ cd frontend && npm run dev   # http://localhost:5173
    body/caption cards stream in. If you hit the daily free quota, the job pauses
    and you can **Resume** later.
 5. **Download** Text-Only or Master CSVs at any tier (subject / section /
-   subheader). Click a node to **review and edit** its cards, or use the regen
+   subheader). Text-Only can optionally export to Google Sheets — see
+   [`docs/google-sheets-export-setup.md`](docs/google-sheets-export-setup.md).
+   Click a node to **review and edit** its cards, or use the regen
    (↻) button to re-run a single node.
 
 ## Anki import
@@ -171,4 +173,3 @@ One-time keypair setup (owner only): `python tools/make_key.py --init`
   themselves (images aren't in the PDF text stream).
 - Unlabeled captions (without a `FIGURE N` label) are best-effort.
 - API keys are stored in plaintext locally and never committed.
-```

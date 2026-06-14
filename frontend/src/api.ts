@@ -1,4 +1,13 @@
-import type { Card, LicenseStatus, ProviderConfig, SubjectSummary, SubsectionInfo, Tree, ValidationReport } from "./types";
+import type {
+  Card,
+  LicenseStatus,
+  ProviderConfig,
+  SheetExportResult,
+  SubjectSummary,
+  SubsectionInfo,
+  Tree,
+  ValidationReport,
+} from "./types";
 
 async function j<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -164,4 +173,18 @@ export const api = {
 
   getSubsectionInfo: (nodeId: number) =>
     fetch(`/api/nodes/${nodeId}/info`).then((r) => j<SubsectionInfo>(r)),
+
+  startGoogleAuth: () =>
+    fetch("/api/auth/google/start").then((r) => j<{ url: string }>(r)),
+
+  disconnectGoogle: () =>
+    fetch("/api/auth/google/disconnect", { method: "POST" }).then((r) => j<ProviderConfig>(r)),
+
+  exportNodeSheet: (nodeId: number) =>
+    fetch(`/api/nodes/${nodeId}/export`, { method: "POST" }).then((r) => j<SheetExportResult>(r)),
+
+  exportSubjectSheet: (subjectId: number) =>
+    fetch(`/api/subjects/${subjectId}/export`, { method: "POST" }).then((r) =>
+      j<SheetExportResult>(r)
+    ),
 };

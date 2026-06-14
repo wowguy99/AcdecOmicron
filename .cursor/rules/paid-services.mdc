@@ -1,0 +1,46 @@
+---
+description: Stop and ask before implementing integrations that could incur charges
+alwaysApply: true
+---
+
+# Paid or chargeable services
+
+Before implementing (or recommending) any feature that depends on an **external paid service**, **metered API**, **cloud resource**, or **anything that could result in money charges** — **stop, explain, and ask the user to confirm**.
+
+Do not silently wire up billing, credentials, or usage that could cost money.
+
+## When this applies
+
+- Third-party APIs with free tiers but paid overage (AI providers, maps, email, SMS, payments, etc.)
+- Cloud services (AWS, GCP, Azure, hosting, storage, serverless, databases)
+- SaaS with per-seat, per-request, or subscription pricing
+- OAuth/API integrations where the **project owner** may need a billing account (e.g. Google Cloud)
+- Features that increase **existing** billable usage (more API calls, larger storage, higher RPM)
+
+## Required behavior
+
+1. **Stop** — Do not add dependencies, env vars, API keys, SDK calls, or config for the chargeable service until the user agrees.
+2. **Explain** — In plain language, describe:
+   - What service or API is involved
+   - Likely cost model (free tier, per-request, subscription, billing account required, etc.)
+   - Who pays (developer project vs end user vs each install)
+   - One-time setup vs ongoing usage
+3. **Ask** — Get explicit confirmation before proceeding. If multiple options exist (e.g. free-tier providers), list viable choices and recommend one; wait for the user to pick.
+4. **Document** — After approval, note setup steps or link to project docs (e.g. `docs/google-sheets-export-setup.md`) when relevant.
+
+## Does not require stopping
+
+- Purely local features with no external service
+- Using credentials or services the user **already configured** for an **explicitly requested** task
+- Reading or explaining existing integrations without expanding billable usage
+- Open-source or fully self-hosted tools with no vendor billing
+
+## Example
+
+**User:** “Add Stripe checkout.”
+
+**Agent:** Stop. Explain Stripe fees, test vs live keys, and webhook hosting. Ask whether to proceed and which mode (test/live) before writing code.
+
+**User:** “Fix the Google Sheet export button.”
+
+**Agent:** OK to proceed — feature already approved; no new chargeable integration.

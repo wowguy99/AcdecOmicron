@@ -373,10 +373,10 @@ def collect_subject_cards(
 
 def cards_to_csv(cards: list[dict[str, str]]) -> str:
     """Plain 3-column Front,Back,Tag CSV. Fully quoted so commas/newlines/HTML
-    in fields survive Anki import (comma separator, enable 'Allow HTML')."""
+    in fields survive Anki import (comma separator, enable 'Allow HTML').
+    No header row — importers otherwise create a spurious Front/Back/Tag card."""
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_ALL, lineterminator="\n")
-    writer.writerow(["Front", "Back", "Tag"])
     for c in cards:
         writer.writerow([c["front"], c["back"], c["tag"]])
     return buf.getvalue()
